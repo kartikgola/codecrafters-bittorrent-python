@@ -39,6 +39,7 @@ def main():
 
         # Uncomment this block to pass the first stage
         # print(json.dumps(decode_bencode(bencoded_value), default=bytes_to_str))
+        print(json.dumps(decode_bencode(bencoded_value), default=bytes_to_str))
     else:
         raise NotImplementedError(f"Unknown command {command}")
 
