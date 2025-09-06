@@ -1,11 +1,9 @@
 import json
 import sys
+from bencoder.decoder import Decoder
 
-import bencodepy
-# import requests - available if you need it!
-
-def decode_bencode(x):
-    return bencodepy.decode(x)
+# import bencodepy
+# import requests
 
 def main():
     command = sys.argv[1]
@@ -15,6 +13,7 @@ def main():
 
     if command == "decode":
         bencoded_value = sys.argv[2].encode()
+        decoder = Decoder()
 
         # json.dumps() can't handle bytes, but bencoded "strings" need to be
         # bytestrings since they might contain non utf-8 characters.
@@ -27,7 +26,7 @@ def main():
             raise TypeError(f"Type not serializable: {type(data)}")
 
         # Uncomment this block to pass the first stage
-        print(json.dumps(decode_bencode(bencoded_value), default=bytes_to_str))
+        print(json.dumps(decoder.decode(bencoded_value), default=bytes_to_str))
     else:
         raise NotImplementedError(f"Unknown command {command}")
 
