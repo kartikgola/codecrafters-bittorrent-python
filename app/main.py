@@ -1,26 +1,11 @@
 import json
 import sys
 
-# import bencodepy - available if you need it!
+import bencodepy
 # import requests - available if you need it!
 
-# Examples:
-#
-# - decode_bencode(b"5:hello") -> b"hello"
-# - decode_bencode(b"10:hello12345") -> b"hello12345"
-# Integers are encoded as i<number>e. For example, 52 is encoded as i52e and -52 is encoded as i-52e.
-# ./your_program.sh decode i52e
-def decode_bencode(bencoded_value):
-    if chr(bencoded_value[0]).isdigit():
-        first_colon_index = bencoded_value.find(b":")
-        if first_colon_index == -1:
-            raise ValueError("Invalid encoded value")
-        return bencoded_value[first_colon_index+1:]
-    elif bencoded_value[0] == ord('i') and bencoded_value[-1] == ord('e'):
-        return int(bencoded_value[1:-1])
-    else:
-        raise NotImplementedError("Only strings are supported at the moment")
-
+def decode_bencode(x):
+    return bencodepy.decode(x)
 
 def main():
     command = sys.argv[1]
