@@ -27,6 +27,17 @@ def main():
 
         # Uncomment this block to pass the first stage
         print(json.dumps(decoder.decode(bencoded_value), default=bytes_to_str))
+    elif command == "info":
+        file_path = sys.argv[2]
+        try:
+            with open(file_path, 'rb') as f:
+                binary_content = f.read()
+                decoder = Decoder()
+                decoded_content = decoder.decode(binary_content)
+                print(f"Tracker URL: {decoded_content["announce"]}")
+                print(f"Length: {decoded_content["info"]["length"]}")
+        except Exception as e:
+            print("error {e}")
     else:
         raise NotImplementedError(f"Unknown command {command}")
 

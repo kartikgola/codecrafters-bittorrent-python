@@ -1,16 +1,17 @@
 class BencoderException(ValueError):
-    pass
+    def __init__(self, message):
+        super().__init__(message)
 
 class Decoder:
     def __init__(self):
-        self.encoded = ''
+        self.s = ''
         self.i = -1
 
     def decode(self, encoded):
         """
         decodes a given byte string
         """
-        self.encoded = encoded
+        self.s = encoded
         self.i = 0
         return self._parse()
     
@@ -21,16 +22,16 @@ class Decoder:
         returns when encoded[self.i] == val
         """
 
-
         # NOTE: slicing a byte string produces a value of type 'int'
         # ex, if x = b'abc', type(x) would be bytes but type(x[0]) would be int
-
-        if chr(self.encoded[self.i]) == val:
+        if self.i == len(self.s) or chr(self.s[self.i]) == val:
             return
-        while self.i+1 < len(self.encoded):
+
+        # keep moving till you don't find val
+        while self.i+1 < len(self.s):
             self.i += 1
-            if chr(self.encoded[self.i]) == val:
-                return
+            if chr(self.s[self.i]) == val:
+                break
 
     def _parse_int(self):
         """
@@ -41,7 +42,7 @@ class Decoder:
         start = self.i # inside int
         self._seek('e') # now self.i is at the next e
         
-        slice = self.encoded[start: self.i] # from start till e (exclusive)
+        slice = self.s[start: self.i] # from start till e (exclusive)
         val = int(slice)
         self.i += 1
         return val
@@ -54,7 +55,7 @@ class Decoder:
         dct = {}
         self.i += 1 # move past d
         while True:
-            if self.encoded[self.i] == ord('e'):
+            if self.s[self.i] == ord('e'):
                 self.i += 1
                 return dct
             key = self._parse()
@@ -69,7 +70,7 @@ class Decoder:
         lst = []
         self.i += 1 # move past l
         while True:
-            if self.encoded[self.i] == ord('e'):
+            if self.s[self.i] == ord('e'):
                 self.i += 1
                 return lst
             lst.append(self._parse())
@@ -81,16 +82,16 @@ class Decoder:
         """
         start = self.i
         self._seek(':') # now self.i is at :
-        size = int(self.encoded[start: self.i])
+        size = int(self.s[start: self.i])
 
         self.i += 1 # move to first char of str
         start = self.i
-        val = "".join([chr(int_val) for int_val in self.encoded[start: start + size]])
+        val = "".join([chr(int_val) for int_val in self.s[start: start + size]])
         self.i += size
         return val
 
     def _parse(self):
-        ch = self.encoded[self.i]
+        ch = self.s[self.i]
         if ch == ord('i'):
             return self._parse_int()
         elif ch == ord('l'):
