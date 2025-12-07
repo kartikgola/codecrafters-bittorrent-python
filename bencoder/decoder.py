@@ -1,6 +1,13 @@
+import json
+
 class BencoderException(ValueError):
     def __init__(self, message):
         super().__init__(message)
+
+def bytes_to_str(data):
+    if isinstance(data, bytes):
+        return data.hex()
+    raise TypeError(f"Type not serializable: {type(data)}")
 
 class Decoder:
     def __init__(self):
@@ -86,7 +93,16 @@ class Decoder:
 
         self.i += 1 # move to first char of str
         start = self.i
-        val = "".join([chr(int_val) for int_val in self.s[start: start + size]])
+
+        val: bytes = self.s[start: start + size]
+
+        # try to decode into utf-8, else keep it as is
+        try:
+            val = val.decode('utf-8')
+        except UnicodeDecodeError:
+            # Keep as bytes if not valid UTF-8
+            pass
+
         self.i += size
         return val
 

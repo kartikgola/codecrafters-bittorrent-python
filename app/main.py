@@ -1,6 +1,8 @@
 import json
 import sys
 from bencoder.decoder import Decoder
+from bencoder.encoder import Encoder
+import hashlib
 
 # import bencodepy
 # import requests
@@ -34,10 +36,21 @@ def main():
                 binary_content = f.read()
                 decoder = Decoder()
                 decoded_content = decoder.decode(binary_content)
-                print(f"Tracker URL: {decoded_content["announce"]}")
-                print(f"Length: {decoded_content["info"]["length"]}")
+                
+                # Helper function to convert bytes to hex string for display
+                def bytes_to_str(data):
+                    if isinstance(data, bytes):
+                        return data.hex()
+                    raise TypeError(f"Type not serializable: {type(data)}")
+
+                print(f"Tracker URL: {decoded_content.get('announce', '')}")
+                print(f"Length: {decoded_content['info']['length']}")
+                
+                encoded_info = Encoder().encode(decoded_content['info'])
+                print(f"Info Hash: {hashlib.sha1(encoded_info).hexdigest()}")
+
         except Exception as e:
-            print("error {e}")
+            print(e, file=sys.stderr)
     else:
         raise NotImplementedError(f"Unknown command {command}")
 
