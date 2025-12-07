@@ -43,11 +43,19 @@ def main():
                         return data.hex()
                     raise TypeError(f"Type not serializable: {type(data)}")
 
+                print(decoded_content)
+
                 print(f"Tracker URL: {decoded_content.get('announce', '')}")
                 print(f"Length: {decoded_content['info']['length']}")
                 
                 encoded_info = Encoder().encode(decoded_content['info'])
                 print(f"Info Hash: {hashlib.sha1(encoded_info).hexdigest()}")
+                print(f"Piece Length: {decoded_content['info']['piece length']}")
+                print(f"Piece Hashes:")
+
+                pieces = decoded_content['info']['pieces']
+                for i in range(0, len(pieces), 20):
+                    print(pieces[i: i+20].hex())
 
         except Exception as e:
             print(e, file=sys.stderr)

@@ -3,7 +3,10 @@ class Encoder:
         pass
 
     def encode(self, data) -> bytes:
-        """Encodes data to bencode format and returns bytes"""
+        """
+            Encodes data to bencode format and returns bytes
+            The program always does byte manipulation internally.
+        """
         if isinstance(data, dict):
             result = b'd'
             for key in sorted(data.keys()):
