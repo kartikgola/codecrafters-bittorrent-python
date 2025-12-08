@@ -101,9 +101,9 @@ def main():
                         port_bytes = peers_data[i+4: i+6]
 
                         ip = ".".join(str(b) for b in ip_bytes)
-                        port = "".join(str(b) for b in port_bytes)
+                        port = int.from_bytes(port_bytes, byteorder='big')
 
-                        peers.append(ip + ":" + port)
+                        peers.append(ip + ":" + str(port))
                     
                     for peer in peers:
                         print(peer)
