@@ -6,6 +6,9 @@ from bencoder.encoder import Encoder
 import hashlib
 import requests
 import string
+import socket
+import struct
+import os
 
 # import bencodepy
 # import requests
@@ -69,12 +72,6 @@ def main():
                 decoder = Decoder()
                 decoded_content = decoder.decode(binary_content)
                 
-                # Helper function to convert bytes to hex string for display
-                def bytes_to_str(data):
-                    if isinstance(data, bytes):
-                        return data.hex()
-                    raise TypeError(f"Type not serializable: {type(data)}")
-                
                 announce_url = decoded_content['announce']
                 encoded_info = Encoder().encode(decoded_content['info'])
 
@@ -111,9 +108,63 @@ def main():
                     print(f"error: {response.status_code}")
         except Exception as e:
             print(e, file=sys.stderr)
+    elif command == "handshake":
+        file_path = sys.argv[2]
+        peer_info = sys.argv[3]
+        peer_ip, peer_port = peer_info.split(":")
+        try:
+            with open(file_path, 'rb') as f:
+                binary_content = f.read()
+                decoder = Decoder()
+                decoded_content = decoder.decode(binary_content)
+                encoded_info = Encoder().encode(decoded_content['info'])
+
+                pstr = b"BitTorrent protocol" # 19 bytes
+                pstr_len = len(pstr) # 1 byte
+                reserved = b"\x00" * 8 # 8 bytes
+                info_hash = hashlib.sha1(encoded_info).digest() # 20 bytes
+                peer_id = os.urandom(20) # 20 bytes
+
+                handshake = (
+                    struct.pack("!B", pstr_len) + 
+                    pstr + 
+                    reserved + 
+                    info_hash + 
+                    peer_id
+                )
+
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((peer_ip, int(peer_port)))
+                    s.sendall(handshake)
+                    response = recv_exact(s, 68)
+
+                    pstrlen = response[0]
+                    pstr = response[1:1+pstrlen]
+                    reserved = response[1+pstrlen : 1+pstrlen+8]
+                    info_hash = response[1+pstrlen+8 : 1+pstrlen+8+20]
+                    peer_id = response[1+pstrlen+8+20 : 68]
+                    print(f"Peer ID: {peer_id.hex()}")
+
+        except Exception as e:
+            # print(e, file=sys.stderr)
+            raise e
     else:
         raise NotImplementedError(f"Unknown command {command}")
 
+# Helper function to convert bytes to hex string for display
+def bytes_to_str(data):
+    if isinstance(data, bytes):
+        return data.hex()
+    raise TypeError(f"Type not serializable: {type(data)}")
+
+def recv_exact(sock, n):
+    data = b""
+    while len(data) < n:
+        chunk = sock.recv(n - len(data))
+        if not chunk:
+            raise ConnectionError("Connection closed by peer")
+        data += chunk
+    return data
 
 if __name__ == "__main__":
     main()
