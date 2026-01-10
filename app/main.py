@@ -10,6 +10,9 @@ import socket
 import struct
 import os
 
+from client.bittorrent_client import BitTorrentClient
+from client.torrent import Torrent
+
 # import bencodepy
 # import requests
 
@@ -35,121 +38,41 @@ def main():
 
         # Uncomment this block to pass the first stage
         print(json.dumps(decoder.decode(bencoded_value), default=bytes_to_str))
+
     elif command == "info":
         file_path = sys.argv[2]
-        try:
-            with open(file_path, 'rb') as f:
-                binary_content = f.read()
-                decoder = Decoder()
-                decoded_content = decoder.decode(binary_content)
-                
-                # Helper function to convert bytes to hex string for display
-                def bytes_to_str(data):
-                    if isinstance(data, bytes):
-                        return data.hex()
-                    raise TypeError(f"Type not serializable: {type(data)}")
+        t = Torrent(file_path)
+        print(f"Tracker URL: {t.announce}")
+        print(f"Length: {t.info['length']}")
+        print(f"Info Hash: {t.info_hex_hash}")
+        print(f"Piece Length: {t.info['piece length']}")
+        print(f"Piece Hashes:")
 
-                print(decoded_content)
+        pieces = t.info['pieces']
+        for i in range(0, len(pieces), 20):
+            print(pieces[i: i+20].hex())
 
-                print(f"Tracker URL: {decoded_content.get('announce', '')}")
-                print(f"Length: {decoded_content['info']['length']}")
-                
-                encoded_info = Encoder().encode(decoded_content['info'])
-                print(f"Info Hash: {hashlib.sha1(encoded_info).hexdigest()}")
-                print(f"Piece Length: {decoded_content['info']['piece length']}")
-                print(f"Piece Hashes:")
-
-                pieces = decoded_content['info']['pieces']
-                for i in range(0, len(pieces), 20):
-                    print(pieces[i: i+20].hex())
-        except Exception as e:
-            print(e, file=sys.stderr)
     elif command == "peers":
         file_path = sys.argv[2]
-        try:
-            with open(file_path, 'rb') as f:
-                binary_content = f.read()
-                decoder = Decoder()
-                decoded_content = decoder.decode(binary_content)
-                
-                announce_url = decoded_content['announce']
-                encoded_info = Encoder().encode(decoded_content['info'])
-
-                response = requests.get(announce_url, params={
-                    # info_hash: the info hash of the torrent
-                    # 20 bytes long, will need to be URL encoded
-                    # Note: this is NOT the hexadecimal representation, which is 40 bytes long
-                    "info_hash": hashlib.sha1(encoded_info).digest(),
-                    "peer_id": "".join(random.choices(string.ascii_letters, k=20)),
-                    "port": 6881,
-                    "uploaded": 0,
-                    "downloaded": 0,
-                    "left": decoded_content['info']['length'],
-                    "compact": 1
-                })
-
-                if response.status_code == 200:
-                    response_decoded = decoder.decode(response.content)
-                    peers = []
-                    peers_data = response_decoded['peers']
-
-                    for i in range(0, len(peers_data), 6):
-                        ip_bytes = peers_data[i: i+4]
-                        port_bytes = peers_data[i+4: i+6]
-
-                        ip = ".".join(str(b) for b in ip_bytes)
-                        port = int.from_bytes(port_bytes, byteorder='big')
-
-                        peers.append(ip + ":" + str(port))
-                    
-                    for peer in peers:
-                        print(peer)
-                else:
-                    print(f"error: {response.status_code}")
-        except Exception as e:
-            print(e, file=sys.stderr)
+        t = Torrent(file_path)
+        peers = BitTorrentClient().get_peers(t)
+        for peer in peers:
+            print(peer)
+            
     elif command == "handshake":
         file_path = sys.argv[2]
         peer_info = sys.argv[3]
         peer_ip, peer_port = peer_info.split(":")
-        try:
-            with open(file_path, 'rb') as f:
-                binary_content = f.read()
-                decoder = Decoder()
-                decoded_content = decoder.decode(binary_content)
-                encoded_info = Encoder().encode(decoded_content['info'])
-
-                pstr = b"BitTorrent protocol" # 19 bytes
-                pstr_len = len(pstr) # 1 byte
-                reserved = b"\x00" * 8 # 8 bytes
-                info_hash = hashlib.sha1(encoded_info).digest() # 20 bytes
-                peer_id = os.urandom(20) # 20 bytes
-
-                handshake = (
-                    struct.pack("!B", pstr_len) + 
-                    pstr + 
-                    reserved + 
-                    info_hash + 
-                    peer_id
-                )
-
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((peer_ip, int(peer_port)))
-                    s.sendall(handshake)
-                    response = recv_exact(s, 68)
-
-                    pstrlen = response[0]
-                    pstr = response[1:1+pstrlen]
-                    reserved = response[1+pstrlen : 1+pstrlen+8]
-                    info_hash = response[1+pstrlen+8 : 1+pstrlen+8+20]
-                    peer_id = response[1+pstrlen+8+20 : 68]
-                    print(f"Peer ID: {peer_id.hex()}")
-
-        except Exception as e:
-            # print(e, file=sys.stderr)
-            raise e
-    else:
-        raise NotImplementedError(f"Unknown command {command}")
+        t = Torrent(file_path)
+        peer_id = BitTorrentClient().handshake(t, peer_ip, int(peer_port))
+        print(f"Peer ID: {peer_id}")
+    
+    elif command == "download_piece":
+        output_path = sys.argv[3]
+        file_path = sys.argv[4]
+        t = Torrent(file_path)
+        piece_index = sys.argv[5]
+        peer_id = BitTorrentClient().download_piece(t, output_path, int(piece_index))
 
 # Helper function to convert bytes to hex string for display
 def bytes_to_str(data):
