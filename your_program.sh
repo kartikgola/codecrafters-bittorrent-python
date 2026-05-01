@@ -8,8 +8,12 @@
 
 set -e # Exit early if any commands fail
 
-# Copied from .codecrafters/run.sh
-#
-# - Edit this to change how your program runs locally
-# - Edit .codecrafters/run.sh to change how your program runs remotely
-exec pipenv run python3 -m app.main "$@"
+if command -v pipenv >/dev/null 2>&1; then
+  exec pipenv run python3 -m app.main "$@"
+elif python3 -c 'import requests' >/dev/null 2>&1; then
+  exec python3 -m app.main "$@"
+elif command -v uv >/dev/null 2>&1; then
+  exec uv run python3 -m app.main "$@"
+else
+  exec python3 -m app.main "$@"
+fi

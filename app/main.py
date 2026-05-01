@@ -2,8 +2,8 @@ import json
 import sys
 
 from bencoder.decoder import Decoder
-from client.bittorrent_client import BitTorrentClient
-from client.torrent import Torrent
+from bittorrent.client import BitTorrentClient
+from bittorrent.torrent import Torrent
 
 def main():
     command = sys.argv[1]
@@ -24,7 +24,8 @@ def main():
 
     elif command == "info":
         torrent_file_path = sys.argv[2]
-        t = Torrent(torrent_file_path)
+        t = Torrent()
+        t.load_from_file(torrent_file_path)
         print(f"Tracker URL: {t.announce}")
         print(f"Length: {t.info['length']}")
         print(f"Info Hash: {t.info_hex_hash}")
@@ -37,8 +38,9 @@ def main():
 
     elif command == "peers":
         torrent_file_path = sys.argv[2]
-        t = Torrent(torrent_file_path)
-        peers = BitTorrentClient().get_peers(t)
+        t = Torrent()
+        t.load_from_file(torrent_file_path)
+        peers = BitTorrentClient().get_torrent_peer_address(t)
         for peer in peers:
             print(peer)
             
@@ -46,22 +48,32 @@ def main():
         torrent_file_path = sys.argv[2]
         peer_info = sys.argv[3]
         peer_ip, peer_port = peer_info.split(":")
-        t = Torrent(torrent_file_path)
+        t = Torrent()
+        t.load_from_file(torrent_file_path)
         peer_id = BitTorrentClient().handshake(t, peer_ip, int(peer_port))
         print(f"Peer ID: {peer_id}")
     
     elif command == "download_piece":
         output_path = sys.argv[3]
         torrent_file_path = sys.argv[4]
-        t = Torrent(torrent_file_path)
+        t = Torrent()
+        t.load_from_file(torrent_file_path)
         piece_index = sys.argv[5]
-        peer_id = BitTorrentClient().download_piece(t, output_path, int(piece_index))
+        peer_id = BitTorrentClient().download(t, output_path, int(piece_index))
     
     elif command == "download":
         output_path = sys.argv[3]
         torrent_file_path = sys.argv[4]
-        t = Torrent(torrent_file_path)
+        t = Torrent()
+        t.load_from_file(torrent_file_path)
         peer_id = BitTorrentClient().download(t, output_path)
+    
+    elif command == "magnet_parse":
+        magnet_link = sys.argv[2]
+        t = Torrent()
+        t.load_from_magnet_link(magnet_link)
+        print(f"Tracker URL: {t.announce}")
+        print(f"Info Hash: {t.info_hex_hash}")
 
 if __name__ == "__main__":
     main()
