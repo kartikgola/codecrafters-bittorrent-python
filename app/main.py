@@ -116,7 +116,7 @@ def main():
         peers = btc.get_torrent_peer_address(t)
         peer_ip, peer_port = peers[0].split(":")
         btc.fetch_metadata(t, peer_ip, int(peer_port))
-        btc.download(t, output_path, 0)
+        btc.download(t, output_path, int(piece_index))
 
 if __name__ == "__main__":
     main()
