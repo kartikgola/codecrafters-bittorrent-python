@@ -124,7 +124,6 @@ def main():
         t = Torrent()
         t.load_from_magnet_link(magnet_link)
         btc = BitTorrentClient()
-        piece_index = sys.argv[5]
         peers = btc.get_torrent_peer_address(t)
         peer_ip, peer_port = peers[0].split(":")
         btc.fetch_metadata(t, peer_ip, int(peer_port))
