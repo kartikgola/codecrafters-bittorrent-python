@@ -2,6 +2,7 @@ import os
 import sys
 from typing import List
 
+from bittorrent import peer
 from bittorrent.peer import Peer
 from bittorrent.peer_connection import PeerConnection
 from bittorrent.torrent import Torrent, TorrentSummary
@@ -45,10 +46,10 @@ class BitTorrentClient:
     def handshake(self, torrent: Torrent, peer_ip: str, peer_port: int, with_extensions: bool = False) -> str:
         connection = PeerConnection(self._client_id, Peer(None, peer_ip, peer_port), torrent, with_extensions)
         try:
-            peer_id = connection.handshake()
+            peer = connection.handshake()
             if with_extensions:
                 connection.send_extension_handshake()
-            return peer_id
+            return peer
         finally:
             connection.close()
 

@@ -7,6 +7,7 @@ import socket
 import sys
 from typing import Optional
 
+from bencoder.decoder import Decoder
 from bencoder.encoder import Encoder
 from bittorrent.peer import Peer
 from bittorrent.torrent import DEFAULT_BLOCK_LENGTH, Torrent
@@ -66,7 +67,7 @@ class PeerConnection:
         self._status = PeerConnectionStatus.NOT_CONNECTED
         self._with_extensions = with_extensions
 
-    def handshake(self):
+    def handshake(self) -> Peer:
         """
         performs handshake with the peer and updates connection status
         returns peer_id of the peer if handshake is successful, else raises an error
@@ -108,7 +109,7 @@ class PeerConnection:
         self._status = PeerConnectionStatus.HANDSHAKED
         self._peer = Peer(peer_id, self._peer.ip, self._peer.port, supports_extensions=bool(reserved[5] & 0x10))
         print(f"[peer] handshake complete with {self._peer.ip}:{self._peer.port}", file=sys.stderr)
-        return peer_id.hex()
+        return self._peer
 
     def send_extension_handshake(self) -> None:
         if self._status != PeerConnectionStatus.HANDSHAKED:
@@ -121,6 +122,11 @@ class PeerConnection:
             "ut_metadata": self.UT_METADATA_EXTENSION_ID,
             }})
         self.send_message(MessageIdType.EXTENSION, payload)
+
+        # wait for extension handshake response
+        msg = self._wait_for_message(MessageIdType.EXTENSION)
+        payload = Decoder().decode(msg.payload[1:])
+        self._peer.extension_metadata = payload
 
     def _receive_bytes(self, n: int):
         """
