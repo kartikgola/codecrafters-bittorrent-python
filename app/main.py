@@ -93,7 +93,7 @@ def main():
         btc = BitTorrentClient()
         peers = btc.get_torrent_peer_address(t)
         peer_ip, peer_port = peers[0].split(":")
-        peer = btc.handshake(t, peer_ip, int(peer_port), True)
+        btc.fetch_metadata(t, peer_ip, int(peer_port))
         # print(f"Peer ID: {peer.id.hex()}")
         # print(f"Peer Metadata Extension ID: {peer.extension_metadata['m']['ut_metadata']}")
         print(f"Tracker URL: {t.announce}")

@@ -111,7 +111,7 @@ class PeerConnection:
         print(f"[peer] handshake complete with {self._peer.ip}:{self._peer.port}", file=sys.stderr)
         return self._peer
 
-    def send_extension_handshake(self) -> None:
+    def send_extension_handshake(self) -> Peer:
         if self._status != PeerConnectionStatus.HANDSHAKED:
             raise ValueError("extension handshake requires a handshaked peer connection")
 
@@ -127,9 +127,18 @@ class PeerConnection:
         msg = self._wait_for_message(MessageIdType.EXTENSION)
         response_payload = Decoder().decode(msg.payload[1:])
         self._peer.extension_metadata = response_payload
+        return self._peer
 
+    def request_metadata(self) -> None:
+        if self._status != PeerConnectionStatus.HANDSHAKED:
+            raise ValueError("metadata request requires a handshaked peer connection")
+
+        if self._peer.extension_metadata is None:
+            self.send_extension_handshake()
+
+        metadata_extension_id = self._peer.extension_metadata['m']['ut_metadata']
         # send metadata request message
-        request_payload = response_payload['m']['ut_metadata'].to_bytes(1, byteorder='big') + Encoder().encode({
+        request_payload = metadata_extension_id.to_bytes(1, byteorder='big') + Encoder().encode({
             "msg_type": 0, # request
             "piece": 0,
         })
@@ -140,7 +149,6 @@ class PeerConnection:
         decoder = Decoder()
         # parse the first dict 
         meta_dict = decoder.decode(response_message.payload[1:])
-        print(meta_dict)
         # parse the 2nd dict
         info_dict = Decoder().decode(response_message.payload[decoder.i + 1:])
         self._torrent._decoded_content = {"info": info_dict}
@@ -184,10 +192,10 @@ class PeerConnection:
         self._wait_for_message(MessageIdType.BITFIELD)
 
         if self._with_extensions:
-            self.send_extension_handshake()
-
-            # wait for extension handshake response
-            self._wait_for_message(MessageIdType.EXTENSION)
+            if self._torrent.info is None:
+                self.request_metadata()
+            else:
+                self.send_extension_handshake()
         
         if quit_early:
             return b''

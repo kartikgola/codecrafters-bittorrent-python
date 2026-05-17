@@ -43,13 +43,21 @@ class BitTorrentClient:
         peers = self._tracker_client.get_peers(torrent)
         return [f"{peer.ip}:{peer.port}" for peer in peers]
 
-    def handshake(self, torrent: Torrent, peer_ip: str, peer_port: int, with_extensions: bool = False) -> str:
+    def handshake(self, torrent: Torrent, peer_ip: str, peer_port: int, with_extensions: bool = False) -> Peer:
         connection = PeerConnection(self._client_id, Peer(None, peer_ip, peer_port), torrent, with_extensions)
         try:
             peer = connection.handshake()
             if with_extensions:
-                connection.send_extension_handshake()
+                peer = connection.send_extension_handshake()
             return peer
+        finally:
+            connection.close()
+
+    def fetch_metadata(self, torrent: Torrent, peer_ip: str, peer_port: int) -> None:
+        connection = PeerConnection(self._client_id, Peer(None, peer_ip, peer_port), torrent, with_extensions=True)
+        try:
+            connection.handshake()
+            connection.request_metadata()
         finally:
             connection.close()
 
