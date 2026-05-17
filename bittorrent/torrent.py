@@ -103,7 +103,7 @@ class Torrent:
         returns info part of the torrent as JSON value
         """
         if self._decoded_content:
-            return self._decoded_content["None"]
+            return self._decoded_content["info"]
     
         return None
     
