@@ -51,7 +51,7 @@ def main():
         t = Torrent()
         t.load_from_file(torrent_file_path)
         peer = BitTorrentClient().handshake(t, peer_ip, int(peer_port))
-        print(f"Peer ID: {peer.id}")
+        print(f"Peer ID: {peer.id.hex()}")
     
     elif command == "download_piece":
         output_path = sys.argv[3]
@@ -83,7 +83,7 @@ def main():
         peers = btc.get_torrent_peer_address(t)
         peer_ip, peer_port = peers[0].split(":")
         peer = btc.handshake(t, peer_ip, int(peer_port), True)
-        print(f"Peer ID: {peer.id}")
+        print(f"Peer ID: {peer.id.hex()}")
         print(f"Peer Metadata Extension ID: {peer.extension_metadata['m']['ut_metadata']}")
 
 if __name__ == "__main__":
