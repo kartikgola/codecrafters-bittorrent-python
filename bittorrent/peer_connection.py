@@ -191,11 +191,11 @@ class PeerConnection:
         print("[peer] waiting for bitfield", file=sys.stderr)
         self._wait_for_message(MessageIdType.BITFIELD)
 
-        if self._with_extensions:
-            if self._torrent.info is None:
-                self.request_metadata()
-            else:
-                self.send_extension_handshake()
+        # if self._with_extensions:
+        #     if self._torrent.info is None:
+        #         self.request_metadata()
+        #     else:
+        #         self.send_extension_handshake()
         
         if quit_early:
             return b''
