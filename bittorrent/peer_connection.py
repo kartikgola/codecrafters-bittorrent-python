@@ -118,15 +118,22 @@ class PeerConnection:
         if not self._peer.supports_extensions:
             raise ValueError("peer does not support extension protocol")
 
-        payload = b"\x00" + Encoder().encode({"m": {
+        request_payload = b"\x00" + Encoder().encode({"m": {
             "ut_metadata": self.UT_METADATA_EXTENSION_ID,
             }})
-        self.send_message(MessageIdType.EXTENSION, payload)
+        self.send_message(MessageIdType.EXTENSION, request_payload)
 
         # wait for extension handshake response
         msg = self._wait_for_message(MessageIdType.EXTENSION)
-        payload = Decoder().decode(msg.payload[1:])
-        self._peer.extension_metadata = payload
+        response_payload = Decoder().decode(msg.payload[1:])
+        self._peer.extension_metadata = response_payload
+
+        # send metadata request message
+        request_payload = response_payload['m']['ut_metadata'].to_bytes(1, byteorder='big') + Encoder().encode({
+            "msg_type": 0, # request
+            "piece": 0,
+        })
+        self.send_message(MessageIdType.EXTENSION, request_payload)
 
     def _receive_bytes(self, n: int):
         """
