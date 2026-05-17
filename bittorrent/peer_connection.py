@@ -134,6 +134,18 @@ class PeerConnection:
             "piece": 0,
         })
         self.send_message(MessageIdType.EXTENSION, request_payload)
+        
+        # wait for data piece response
+        response_message = self._wait_for_message()
+        decoder = Decoder()
+        # parse the first dict 
+        meta_dict = decoder.decode(response_message.payload[1:])
+        print(meta_dict)
+        # parse the 2nd dict
+        info_dict = Decoder().decode(response_message.payload[decoder.i + 1:])
+        self._torrent._decoded_content = {"info": info_dict}
+        # print(info_dict)
+        # print(hashlib.sha1(Encoder().encode(info_dict)).hexdigest())
 
     def _receive_bytes(self, n: int):
         """
@@ -232,10 +244,10 @@ class PeerConnection:
 
         return Message(message_id, payload)
 
-    def _wait_for_message(self, message_id_type: MessageIdType) -> Message:
+    def _wait_for_message(self, message_id_type: Optional[MessageIdType] = None) -> Message:
         while True:
             message = self.receive_message()
-            if message is not None and message.id == message_id_type:
+            if message is not None and (message_id_type is None or message.id == message_id_type):
                 return message
 
     def _download_piece(self, piece_index: int, total_length: int, piece_length: int) -> bytes:

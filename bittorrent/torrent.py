@@ -112,7 +112,7 @@ class Torrent:
         """
         returns announce url of the torrent
         """
-        if self._decoded_content is not None:
+        if self._decoded_content is not None and self._decoded_content.get('announce'):
             return self._decoded_content['announce']
         
         if self._parsed_magnet_link is not None:

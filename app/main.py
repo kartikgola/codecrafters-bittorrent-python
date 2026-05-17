@@ -96,9 +96,15 @@ def main():
         peer = btc.handshake(t, peer_ip, int(peer_port), True)
         # print(f"Peer ID: {peer.id.hex()}")
         # print(f"Peer Metadata Extension ID: {peer.extension_metadata['m']['ut_metadata']}")
-        # print(f"Tracker URL: {t.announce}")
-        # print(f"Length: {t.announce}")
-        # print(f"Info Hash: {t.info_hex_hash}")
+        print(f"Tracker URL: {t.announce}")
+        print(f"Length: {t.info['length']}")
+        print(f"Info Hash: {t.info_hex_hash}")
+        print(f"Piece Length: {t.info['piece length']}")
+        print(f"Piece Hashes:")
+        
+        pieces = t.info['pieces']
+        for i in range(0, len(pieces), 20):
+            print(pieces[i: i+20].hex())
 
 if __name__ == "__main__":
     main()
