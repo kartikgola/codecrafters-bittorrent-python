@@ -79,8 +79,6 @@ def main():
         magnet_link = sys.argv[2]
         t = Torrent()
         t.load_from_magnet_link(magnet_link)
-        # print(f"Tracker URL: {t.announce}")
-        # print(f"Info Hash: {t.info_hex_hash}")
         btc = BitTorrentClient()
         peers = btc.get_torrent_peer_address(t)
         peer_ip, peer_port = peers[0].split(":")

@@ -7,6 +7,7 @@ import socket
 import sys
 from typing import Optional
 
+from bencoder.encoder import Encoder
 from bittorrent.peer import Peer
 from bittorrent.torrent import DEFAULT_BLOCK_LENGTH, Torrent
 
@@ -20,6 +21,7 @@ class MessageIdType(IntEnum):
     BITFIELD = 5
     REQUEST = 6
     PIECE = 7
+    EXTENSION = 20
 
 
 class ProtocolType(IntEnum):
@@ -54,6 +56,7 @@ class PeerConnection:
 
     # number of bytes in the handshake message
     PEER_HANDSHAKE_BYTE_LENGTH = 68
+    UT_METADATA_EXTENSION_ID = 1
 
     def __init__(self, client_id: bytes, peer: Peer, torrent: Torrent, with_extensions: bool = False):
         self._socket = None
@@ -95,6 +98,7 @@ class PeerConnection:
         # parse the response to extract peer_id and update connection status
         pstrlen = response[0]
         pstr = response[1:1+pstrlen]
+        reserved = response[1+pstrlen: 1+pstrlen+8]
         info_hash = response[1+pstrlen+8 : 1+pstrlen+8+20]
         if pstr != b"BitTorrent protocol" or info_hash != self._torrent.info_hash:
             self.close()
@@ -102,9 +106,21 @@ class PeerConnection:
 
         peer_id = response[1 + pstrlen + 8 + 20 : self.PEER_HANDSHAKE_BYTE_LENGTH]
         self._status = PeerConnectionStatus.HANDSHAKED
-        self._peer = Peer(peer_id, self._peer.ip, self._peer.port)
+        self._peer = Peer(peer_id, self._peer.ip, self._peer.port, supports_extensions=bool(reserved[5] & 0x10))
         print(f"[peer] handshake complete with {self._peer.ip}:{self._peer.port}", file=sys.stderr)
         return peer_id.hex()
+
+    def send_extension_handshake(self) -> None:
+        if self._status != PeerConnectionStatus.HANDSHAKED:
+            raise ValueError("extension handshake requires a handshaked peer connection")
+
+        if not self._peer.supports_extensions:
+            raise ValueError("peer does not support extension protocol")
+
+        payload = b"\x00" + Encoder().encode({"m": {
+            "ut_metadata": self.UT_METADATA_EXTENSION_ID,
+            }})
+        self.send_message(MessageIdType.EXTENSION, payload)
 
     def _receive_bytes(self, n: int):
         """
@@ -129,7 +145,7 @@ class PeerConnection:
             payload
         )
 
-    def download(self, piece_index: Optional[int] = None) -> bytes:
+    def download(self, piece_index: Optional[int] = None, quit_early: bool = False) -> bytes:
         """
         Download the complete file, or a single piece when piece_index is provided.
         Returns the downloaded bytes.
@@ -141,6 +157,15 @@ class PeerConnection:
 
         print("[peer] waiting for bitfield", file=sys.stderr)
         self._wait_for_message(MessageIdType.BITFIELD)
+
+        if self._with_extensions:
+            self.send_extension_handshake()
+
+            # wait for extension handshake response
+            self._wait_for_message(MessageIdType.EXTENSION)
+        
+        if quit_early:
+            return b''
 
         print("[peer] received bitfield; sending interested", file=sys.stderr)
         self.send_message(MessageIdType.INTERESTED, b'')

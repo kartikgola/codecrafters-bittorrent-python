@@ -49,7 +49,6 @@ class TrackerClient:
         if 'failure reason' in decoded_response:
             raise ValueError(f"tracker request failed with reason: {decoded_response['failure reason']}")
         
-        print(decoded_response)
         peers_data = decoded_response['peers']
         peers = []
         for i in range(0, len(peers_data), 6):

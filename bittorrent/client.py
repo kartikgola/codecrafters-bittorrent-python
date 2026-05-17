@@ -45,11 +45,17 @@ class BitTorrentClient:
     def handshake(self, torrent: Torrent, peer_ip: str, peer_port: int, with_extensions: bool = False) -> str:
         connection = PeerConnection(self._client_id, Peer(None, peer_ip, peer_port), torrent, with_extensions)
         try:
-            return connection.handshake()
+            peer_id = connection.handshake()
+            if with_extensions:
+                connection.send_extension_handshake()
+            return peer_id
         finally:
             connection.close()
 
-    def download(self, torrent: Torrent, output_path: str, piece_index: int = None):
+    def download(self, torrent: Torrent, output_path: str, piece_index: int = None, quit_early: bool = False) -> None:
+        if torrent.info is None and not quit_early:
+            raise ValueError("magnet downloads require fetching metadata before downloading pieces")
+
         peers = self._tracker_client.get_peers(torrent)
         if not peers:
             raise ValueError("no peers found")
@@ -58,10 +64,10 @@ class BitTorrentClient:
         print(f"[client] downloading {target} to {output_path}", file=sys.stderr)
         last_error = None
         for peer in peers:
-            connection = PeerConnection(self._client_id, peer, torrent)
+            connection = PeerConnection(self._client_id, peer, torrent, with_extensions=torrent.info is None)
             try:
                 print(f"[client] trying peer {peer.ip}:{peer.port}", file=sys.stderr)
-                data = connection.download(piece_index)
+                data = connection.download(piece_index, quit_early)
                 with open(output_path, 'wb') as output_file:
                     output_file.write(data)
                 print(f"[client] wrote {len(data)} bytes to {output_path}", file=sys.stderr)

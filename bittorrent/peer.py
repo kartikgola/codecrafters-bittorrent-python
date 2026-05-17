@@ -5,3 +5,4 @@ class Peer:
     id: bytes
     ip: str
     port: int
+    supports_extensions: bool = False
