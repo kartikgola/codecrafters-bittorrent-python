@@ -74,6 +74,18 @@ def main():
         t.load_from_magnet_link(magnet_link)
         print(f"Tracker URL: {t.announce}")
         print(f"Info Hash: {t.info_hex_hash}")
+    
+    elif command == "magnet_handshake":
+        magnet_link = sys.argv[2]
+        t = Torrent()
+        t.load_from_magnet_link(magnet_link)
+        # print(f"Tracker URL: {t.announce}")
+        # print(f"Info Hash: {t.info_hex_hash}")
+        btc = BitTorrentClient()
+        peers = btc.get_torrent_peer_address(t)
+        peer_ip, peer_port = peers[0].split(":")
+        peer_id = btc.handshake(t, peer_ip, int(peer_port), True)
+        print(f"Peer ID: {peer_id}")
 
 if __name__ == "__main__":
     main()

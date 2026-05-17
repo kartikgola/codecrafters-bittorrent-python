@@ -33,7 +33,7 @@ class TrackerClient:
             # progress so far
             "uploaded": 0,
             "downloaded": 0,
-            "left": torrent.info['length'],
+            "left": torrent.info['length'] if torrent.info else 1,
             "compact": 1,
 
             # event: started, stopped, completed
@@ -49,6 +49,7 @@ class TrackerClient:
         if 'failure reason' in decoded_response:
             raise ValueError(f"tracker request failed with reason: {decoded_response['failure reason']}")
         
+        print(decoded_response)
         peers_data = decoded_response['peers']
         peers = []
         for i in range(0, len(peers_data), 6):

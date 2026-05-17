@@ -55,12 +55,13 @@ class PeerConnection:
     # number of bytes in the handshake message
     PEER_HANDSHAKE_BYTE_LENGTH = 68
 
-    def __init__(self, client_id: bytes, peer: Peer, torrent: Torrent):
+    def __init__(self, client_id: bytes, peer: Peer, torrent: Torrent, with_extensions: bool = False):
         self._socket = None
         self._peer = peer
         self._torrent = torrent
         self._client_id = client_id
         self._status = PeerConnectionStatus.NOT_CONNECTED
+        self._with_extensions = with_extensions
 
     def handshake(self):
         """
@@ -73,6 +74,9 @@ class PeerConnection:
         pstr = b"BitTorrent protocol" # 19 bytes
         pstr_len = len(pstr)          # 1 byte
         reserved = b"\x00" * 8        # 8 bytes
+
+        if self._with_extensions:
+            reserved = b"\x00" * 5 + b"\x10" + 2 * b"\x00"
 
         payload = (
             pstr_len.to_bytes(1, byteorder='big') + 

@@ -4,7 +4,7 @@ from enum import IntEnum
 import hashlib
 from pathlib import Path
 from typing import Dict
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from bencoder.decoder import Decoder
 from bencoder.encoder import Encoder
@@ -62,15 +62,26 @@ class Torrent:
             return ValueError(f"{magnet_link} is not valid")
         
         self._magnet_link = magnet_link
-        self._parsed_magnet_link = parse_qs(magnet_link)
+        query = urlparse(magnet_link).query
+        self._parsed_magnet_link = parse_qs(query)
 
     @property
     def info_hash(self) -> bytes:
         """
         returns 20 bytes of SHA1 digest of torrent's encoded info
         """
-        encoded_info = Encoder().encode(self._decoded_content['info'])
-        return hashlib.sha1(encoded_info).digest()
+        if self._decoded_content is not None:
+            encoded_info = Encoder().encode(self._decoded_content['info'])
+            return hashlib.sha1(encoded_info).digest()
+        
+        if self._parsed_magnet_link is not None:
+            xt = self._parsed_magnet_link["xt"][0]
+            raw_hash = xt.split(":")[-1]
+
+            # if len(raw_hash) == 40:
+            return bytes.fromhex(raw_hash)
+        
+        raise ValueError("torrent content is not loaded, cannot compute info hash")
     
     @property
     def info_hex_hash(self) -> str:
@@ -80,8 +91,10 @@ class Torrent:
         if self._decoded_content is not None:
             encoded_info = Encoder().encode(self._decoded_content['info'])
             return hashlib.sha1(encoded_info).hexdigest()
-        elif self._magnet_link is not None:
-            return self._parsed_magnet_link['magnet:?xt'][0].split(':')[-1]
+        
+        if self._parsed_magnet_link is not None:
+            return self._parsed_magnet_link['xt'][0].split(':')[-1]
+        
         raise ValueError("torrent content is not loaded, cannot compute info hash")
     
     @property
@@ -89,7 +102,10 @@ class Torrent:
         """
         returns info part of the torrent as JSON value
         """
-        return self._decoded_content['info']
+        if self._decoded_content:
+            return self._decoded_content["None"]
+    
+        return None
     
     @property
     def announce(self) -> str:
@@ -98,8 +114,10 @@ class Torrent:
         """
         if self._decoded_content is not None:
             return self._decoded_content['announce']
-        elif self._magnet_link is not None:
+        
+        if self._parsed_magnet_link is not None:
             return self._parsed_magnet_link['tr'][0]
+        
         raise ValueError("torrent content is not loaded, cannot get announce url")
 
     def __repr__(self):
