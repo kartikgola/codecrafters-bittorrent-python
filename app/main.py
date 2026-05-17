@@ -105,6 +105,18 @@ def main():
         pieces = t.info['pieces']
         for i in range(0, len(pieces), 20):
             print(pieces[i: i+20].hex())
+    
+    elif command == "magnet_download_piece":
+        output_path = sys.argv[3]
+        magnet_link = sys.argv[4]
+        t = Torrent()
+        t.load_from_magnet_link(magnet_link)
+        btc = BitTorrentClient()
+        piece_index = sys.argv[5]
+        peers = btc.get_torrent_peer_address(t)
+        peer_ip, peer_port = peers[0].split(":")
+        btc.fetch_metadata(t, peer_ip, int(peer_port))
+        btc.download(t, output_path, 0)
 
 if __name__ == "__main__":
     main()
